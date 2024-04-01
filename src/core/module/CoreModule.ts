@@ -1,5 +1,5 @@
 import CoreHttp from '@/core/http/CoreHttp'
-import CoreSocket from '@/core/socket/CoreSocket'
+import CoreWebSocket from '@/core/web-socket/CoreWebSocket'
 
 export default class CoreModule {
   name: string
@@ -11,6 +11,6 @@ export default class CoreModule {
   public http (http: CoreHttp) {
   }
 
-  public socket (socket: CoreSocket) {
+  public webSocket (webSocket: CoreWebSocket) {
   }
 }

@@ -1,8 +1,9 @@
 import CoreEncoder from '@/core/CoreEncoder'
 import contentTypes from '@/dictionaries/contentTypes'
-import { ServerHttp2Stream } from 'http2'
+import { ClientSessionOptions, SecureClientSessionOptions, ServerHttp2Stream } from 'http2'
 import { OutgoingHttpHeaders } from 'node:http'
-import { ServerStreamResponseOptions } from 'node:http2'
+import { connect, ServerStreamResponseOptions } from 'node:http2'
+import CoreRequest from '@/core/http/CoreRequest'
 
 export default class CoreResponse {
   private readonly stream: ServerHttp2Stream
@@ -14,15 +15,21 @@ export default class CoreResponse {
   }
 
   public respond (headers?: OutgoingHttpHeaders, options?: ServerStreamResponseOptions): this {
-    if (!this.headersSent) this.stream.respond(headers, options)
+    if (this.headersSent || this.destroyed || !this.writable) return this
+    this.stream.respond(headers, options)
     return this
   }
 
   public async end (chunk?: any) {
-    if (this.closed) return
+    if (this.closed || this.destroyed) return
     return await new Promise<void>((resolve) => {
-      this.stream.end(chunk, resolve)
+      if (chunk && this.writable) this.stream.write(chunk, () => this.stream.end(resolve))
+      else this.stream.end(resolve)
     })
+  }
+
+  public get destroyed () {
+    return this.stream.destroyed
   }
 
   public get headersSent () {
@@ -31,6 +38,10 @@ export default class CoreResponse {
 
   public get closed () {
     return this.stream.closed
+  }
+
+  public get writable () {
+    return this.stream.writable
   }
 
   public get open () {
@@ -67,5 +78,74 @@ export default class CoreResponse {
     })
 
     await this.end(chunk)
+  }
+
+  /* public legacyProxy (request: CoreRequest, options: http1.RequestOptions) {
+    return new Promise<void>((resolve) => {
+      http1.request(options, (proxyResponse) => {
+        const proxyChunks: Array<Uint8Array> = []
+        console.log('proxyResponse')
+        proxyResponse
+          .setEncoding('utf8')
+          .on('data', (c) => {
+            console.log('legacyProxy data', c)
+            proxyChunks.push(typeof c === 'string' ? CoreEncoder.encode(c) : c)
+          })
+          .on('end', async () => {
+            console.log('legacyProxy end')
+            await this.end(<Uint8Array>Buffer.concat(proxyChunks))
+            resolve()
+          })
+          .on('error', async (error) => {
+            this.respond({ ':status': 503 })
+            await this.end(CoreEncoder.encode(JSON.stringify({
+              error: {
+                type: 'proxy',
+                message: error.message
+              }
+            })))
+            resolve()
+          })
+      })
+    })
+  } */
+
+  public proxy (request: CoreRequest, origin: string, options?: ClientSessionOptions | SecureClientSessionOptions) {
+    return new Promise<void>((resolve) => {
+      console.log('connect')
+      connect(origin, options, (proxySession) => {
+        const proxyChunks: Array<Uint8Array> = []
+        console.log('before request')
+        proxySession.request(request.headers)
+          .on('response', (proxyResponseHeaders) => {
+            this.respond(proxyResponseHeaders)
+          })
+          .on('error', async (error) => {
+            this.respond({ ':status': 503 })
+            await this.end(CoreEncoder.encode(JSON.stringify({
+              error: {
+                type: 'proxy',
+                message: error instanceof Error ? error.message : 'unknown'
+              }
+            })))
+            resolve()
+          })
+          .on('data', c => proxyChunks.push(typeof c === 'string' ? CoreEncoder.encode(c) : c))
+          .on('end', async () => {
+            await this.end(<Uint8Array>Buffer.concat(proxyChunks))
+            proxySession.close()
+            resolve()
+          })
+      }).on('error', async (error) => {
+        this.respond({ ':status': 503 })
+        await this.end(CoreEncoder.encode(JSON.stringify({
+          error: {
+            type: 'proxy',
+            message: error instanceof Error ? error.message : 'unknown'
+          }
+        })))
+        resolve()
+      })
+    })
   }
 }

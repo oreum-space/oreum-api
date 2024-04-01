@@ -9,7 +9,7 @@ export default class ApiModule extends CoreModule {
   http (http: CoreHttp) {
     super.http(http)
 
-    const apiRoute = http.subdomain('api')
+    const apiRoute = http.subdomain(this.name)
     apiRoute.get('/', async (request, response) => {
       await response.json({
         subdomain: request.subdomain,

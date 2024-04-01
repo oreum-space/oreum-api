@@ -38,9 +38,9 @@ export default class CoreRoute {
     if (this.#method !== request.method) return
     const params = this.path?.test(request.path)
 
-    if (!params) return
+    if (this.path && !params) return
     if (!this.handlers) return
-    request.setParams(params)
+    request.setParams(params ?? {})
     for (const handler of this.handlers) {
       if (response.closed) return
       await handler(request, response)
@@ -48,7 +48,13 @@ export default class CoreRoute {
   }
 
   public async handle (request: CoreRequest, response: CoreResponse) {
-    console.log(request.subdomain, request.domain, request.path)
+    // any
+    if (!this.subdomain && !this.path && !this.#method && this.handlers)  {
+      for (const handler of this.handlers) {
+        if (response.closed) return
+        await handler(request, response)
+      }
+    }
     if (this.subdomain && this.subdomain !== request.subdomain) return
     if (this.#method) {
       await this.handleEndpoint(request, response)
@@ -87,5 +93,11 @@ export default class CoreRoute {
   public delete (path?: string, ...handlers: Array<HttpHandler>) {
     this.method('delete', path, ...handlers)
     return this
+  }
+
+  public any (...handlers: Array<HttpHandler>) {
+    const route = new CoreRoute({ handlers })
+    this.routes.push(route)
+    return route
   }
 }

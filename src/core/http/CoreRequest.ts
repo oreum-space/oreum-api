@@ -9,7 +9,7 @@ import { DeepPartial } from '@/types/DeepPartial'
 
 export default class CoreRequest {
   private readonly stream: ServerHttp2Stream
-  private readonly headers: IncomingHttpHeaders
+  public readonly headers: IncomingHttpHeaders
   #params: Record<string, any>
   private readonly dataPromise: Promise<Uint8Array>
 

@@ -8,18 +8,27 @@ import {
   IncomingHttpHeaders,
   ServerHttp2Stream
 } from 'http2'
+import { Http2SecureServer } from 'node:http2'
 
 export type HttpHandler = (request: CoreRequest, response: CoreResponse) => Promise<void> | void
 
 export default class CoreHttp {
+  public readonly server: Http2SecureServer
   private readonly routes: Array<CoreRoute>
 
   constructor () {
     this.routes = []
-    createSecureServer({ cert: readFileSync(CoreEnv.CORE_HTTP_CERT), key: readFileSync(CoreEnv.CORE_HTTP_KEY) })
+    this.server = createSecureServer({ cert: readFileSync(CoreEnv.CORE_HTTP_CERT), key: readFileSync(CoreEnv.CORE_HTTP_KEY), allowHTTP1: true })
       .on('error', this.error.bind(this))
       .on('stream', this.stream.bind(this))
-      .listen(CoreEnv.CORE_HTTP_PORT)
+      .on('unknownProtocol', this.unknownProtocol.bind(this))
+      .listen(+CoreEnv.CORE_HTTP_PORT, () => {
+        console.log(process.pid, process.ppid, +CoreEnv.CORE_HTTP_PORT)
+      })
+  }
+
+  private unknownProtocol () {
+    console.log('unknownProtocol')
   }
 
   private error (error: any) {
@@ -36,8 +45,10 @@ export default class CoreHttp {
         await route.handle(request, response)
       }
 
-      response.respond({ 'status': 404 }, { endStream: true })
+      response.respond({ 'status': 404 })
+      await response.end()
     } catch (error) {
+      console.error(error)
       try {
         if (stream.closed) return
         if (!stream.headersSent) stream.respond({ ':status': 500 })
