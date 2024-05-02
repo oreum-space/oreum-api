@@ -1,4 +1,4 @@
-import { Server, WebSocket, WebSocketServer } from 'ws'
+import { WebSocket, WebSocketServer } from 'ws'
 import { Http2SecureServer } from 'node:http2'
 import { createServer, IncomingMessage } from 'node:http'
 import CoreDecoder from '@/core/CoreDecoder'
@@ -25,7 +25,7 @@ export default class CoreWebSocket {
   private async connection (socket: WebSocket, request: IncomingMessage) {
     if (socket.readyState >= 2) return
     for (const handler of this.handlers) {
-      await handler(socket,request)
+      await handler(socket, request)
       if (socket.readyState >= 2) return
     }
     socket.close(4404)

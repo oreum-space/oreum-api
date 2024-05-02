@@ -23,7 +23,8 @@ export default class CoreHttp {
       .on('stream', this.stream.bind(this))
       .on('unknownProtocol', this.unknownProtocol.bind(this))
       .listen(+CoreEnv.CORE_HTTP_PORT, () => {
-        console.log(process.pid, process.ppid, +CoreEnv.CORE_HTTP_PORT)
+        console.clear()
+        console.log(`Listening ${ CoreEnv.CORE_HTTP_PORT }...`)
       })
   }
 

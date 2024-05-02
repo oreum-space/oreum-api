@@ -112,10 +112,8 @@ export default class CoreResponse {
 
   public proxy (request: CoreRequest, origin: string, options?: ClientSessionOptions | SecureClientSessionOptions) {
     return new Promise<void>((resolve) => {
-      console.log('connect')
       connect(origin, options, (proxySession) => {
         const proxyChunks: Array<Uint8Array> = []
-        console.log('before request')
         proxySession.request(request.headers)
           .on('response', (proxyResponseHeaders) => {
             this.respond(proxyResponseHeaders)

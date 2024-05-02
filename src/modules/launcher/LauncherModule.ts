@@ -33,7 +33,7 @@ export default class LauncherModule extends CoreModule {
     super.webSocket(webSocket)
 
     webSocket.handler(async (socket: WebSocket, request: IncomingMessage) => {
-      if (!request.headers.origin?.startsWith(this.name)) return
+      if (!request.headers.host?.startsWith(this.name)) return
       console.log(request.headers)
       // await webSocket.proxy(socket, request, CoreEnv.UI_WS_PROXY)
     })

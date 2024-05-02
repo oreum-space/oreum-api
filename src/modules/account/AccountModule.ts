@@ -30,7 +30,7 @@ export default class AccountModule extends CoreModule {
     super.webSocket(webSocket)
 
     webSocket.handler(async (socket: WebSocket, request: IncomingMessage) => {
-      if (!request.headers.origin?.startsWith(this.name)) return
+      if (!request.headers.host?.startsWith(this.name)) return
       await webSocket.proxy(socket, request, CoreEnv.ACCOUNT_WS_PROXY, await CoreEnv.ACCOUNT_PROXY_CA)
     })
   }

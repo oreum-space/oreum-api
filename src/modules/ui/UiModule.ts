@@ -26,7 +26,7 @@ export default class UiModule extends CoreModule {
     super.webSocket(webSocket)
 
     webSocket.handler(async (socket: WebSocket, request: IncomingMessage) => {
-      if (!request.headers.origin?.startsWith(this.name)) return
+      if (!request.headers.host?.startsWith(this.name)) return
       await webSocket.proxy(socket, request, CoreEnv.UI_WS_PROXY, await CoreEnv.UI_PROXY_CA)
     })
   }
